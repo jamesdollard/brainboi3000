@@ -4,6 +4,7 @@ from scipy import integrate, signal
 from mne.time_frequency import psd_array_multitaper
 from brainflow import DataFilter, FilterTypes
 import numpy as np
+import pandas as pd
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QRadioButton
 )
-
+NUM_ELECTRODES = 8
 
 # Enables user to capture and compare the bandpower of two recording sessions
 class ABBandpowerWidget(QWidget):
@@ -360,10 +361,11 @@ class ABBandpowerWidget(QWidget):
             # self.parent.board_shim.start_stream(num_data_points)
             print('recording state a')
             time.sleep(self.a_record_time)  # let buffer get filled
-            self.a_data = self.parent.board_shim.get_board_data()
+            self.a_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
             self.recording = False
             if self.a_data is not None and self.b_data is not None:
                 self.process_bp()
+            pd.DataFrame(np.transpose(self.a_data)).to_csv('state_raw_data/a_data.csv')
         else:
             print('Wait for current recording to finish')
 
@@ -374,10 +376,11 @@ class ABBandpowerWidget(QWidget):
             # self.parent.board_shim.start_stream(num_data_points)
             print('recording state b')
             time.sleep(self.b_record_time)  # let buffer get filled
-            self.b_data = self.parent.board_shim.get_board_data()
+            self.b_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
             self.recording = False
             if self.a_data is not None and self.b_data is not None:
                 self.process_bp()
+            pd.DataFrame(np.transpose(self.b_data)).to_csv('state_raw_data/b_data.csv')
         else:
             print('Wait for current recording to finish')
 
@@ -476,7 +479,7 @@ class ABBandpowerWidget(QWidget):
         a_frequencies = []
         b_frequencies = []
 
-        for i in range(0, len(self.parent.exg_channels)):
+        for i in range(0, NUM_ELECTRODES):
             if self.include_all_electrodes or (i+1) in self.custom_electrode_selection:
                 a_channel = self.a_data[i] - np.mean(self.a_data[i])
                 b_channel = self.b_data[i] - np.mean(self.b_data[i])
