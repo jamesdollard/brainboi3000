@@ -18,7 +18,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QGridLayout,
     QButtonGroup,
-    QRadioButton
+    QRadioButton,
+    QGroupBox
 )
 NUM_ELECTRODES = 8
 EEG_BANDS = [
@@ -298,6 +299,44 @@ class ABBandpowerWidget(QWidget):
         data_processing_title = QLabel("Data Processing Options")
         data_processing_title.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         data_processing_title.setStyleSheet("""color: #fff;font-size: 15px;""")
+
+        # # Groups
+        #
+        # # Record Data Group
+        # state_recording_layout = QVBoxLayout()
+        # state_recording_layout.addLayout(state_a)
+        # state_recording_layout.addLayout(state_b)
+        # state_recording_group = QGroupBox("Record Data")
+        # state_recording_group.setLayout(state_recording_layout)
+        # state_recording_group.setStyleSheet("""
+        #     border-image: none !important;
+        #     border-style: outset;
+        #     border-width: 2px;
+        #     border-radius: 10px;
+        #     border-color: beige;
+        #     color: #fff;
+        #     font-size: 15px;
+        # """)
+        #
+        # # Data Processing Options Group
+        # data_processing_options_layout = QVBoxLayout()
+        # data_processing_options_layout.addLayout(bandpower_selection)
+        # data_processing_options_layout.addWidget(relative_plot_checkbox)
+        # data_processing_options_layout.addWidget(sixty_hz_filter_checkbox)
+        # data_processing_options_layout.addWidget(zero_to_five_hz_filter_checkbox)
+        # data_processing_options_layout.addLayout(frequency_range_selection)
+        # data_processing_options_layout.addLayout(electrode_selection)
+        # data_processing_options_group = QGroupBox("Data Processing Options")
+        # data_processing_options_group.setStyleSheet("""
+        #     border-image: none !important;
+        #     border-style: outset;
+        #     border-width: 2px;
+        #     border-radius: 10px;
+        #     border-color: beige;
+        #     color: #fff;
+        #     font-size: 15px;
+        # """)
+        # data_processing_options_group.setLayout(data_processing_options_layout)
 
         input_layout = QGridLayout()
         input_layout.addWidget(data_recording_title, 0, 0)
