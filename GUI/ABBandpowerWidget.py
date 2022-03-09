@@ -21,6 +21,13 @@ from PySide6.QtWidgets import (
     QRadioButton
 )
 NUM_ELECTRODES = 8
+EEG_BANDS = [
+    [0, 4],  # Delta
+    [4, 7],  # Theta
+    [7, 12],  # Alpha
+    [12, 30],  # Beta
+    [30, 50]  # Gamma
+]
 
 # Enables user to capture and compare the bandpower of two recording sessions
 class ABBandpowerWidget(QWidget):
@@ -37,7 +44,6 @@ class ABBandpowerWidget(QWidget):
         self.b_record_time = 0
         self.a_data = None
         self.b_data = None
-        self.recording = False
 
         # Data processing variables
         self.filter_sixty_hz = False
@@ -58,8 +64,11 @@ class ABBandpowerWidget(QWidget):
         # Processed data variables
         self.a_processed_bp = None
         self.b_processed_bp = None
-        self.a_frequencies = None
-        self.b_frequencies = None
+        self.a_frequencies = [0, 0]
+        self.b_frequencies = [0, 0]
+
+        self.a_standard_band_values = [0, 0, 0, 0, 0]
+        self.b_standard_band_values = [0, 0, 0, 0, 0]
 
         # ** WIDGET CONSTRUCTION ** #
 
@@ -79,9 +88,10 @@ class ABBandpowerWidget(QWidget):
         a_record_time_input.setStyleSheet("""background-color: #fff; color: #000;font: 15px; min-width: 30px;
                                              margin-bottom: 0px;  padding: 5px; max-width: 30px;""")
 
-        a_record_button = QPushButton("Record State A")
-        a_record_button.pressed.connect(self.record_a)
-        a_record_button.setStyleSheet("""
+        self.a_record_button = QPushButton("Record State A")
+        self.a_record_button.pressed.connect(self.pressed_record_a)
+        self.a_record_button.released.connect(self.record_a)
+        self.a_record_button.setStyleSheet("""
             border-image: none !important;
             border-style: outset;
             border-width: 2px;
@@ -94,7 +104,7 @@ class ABBandpowerWidget(QWidget):
         state_a = QHBoxLayout()
         state_a.addWidget(a_record_time_label)
         state_a.addWidget(a_record_time_input)
-        state_a.addWidget(a_record_button)
+        state_a.addWidget(self.a_record_button)
 
         # State B #
 
@@ -108,9 +118,10 @@ class ABBandpowerWidget(QWidget):
         b_record_time_input.setStyleSheet("""background-color: #fff; color: #000;font: 15px; min-width: 30px;
                                              margin-bottom: 0px; max-width: 30px; padding: 5px;""")
 
-        b_record_button = QPushButton("Record State B")
-        b_record_button.pressed.connect(self.record_b)
-        b_record_button.setStyleSheet("""
+        self.b_record_button = QPushButton("Record State B")
+        self.b_record_button.pressed.connect(self.record_b_pressed)
+        self.b_record_button.released.connect(self.record_b)
+        self.b_record_button.setStyleSheet("""
             border-image: none !important;
             border-style: outset;
             border-width: 2px;
@@ -123,7 +134,7 @@ class ABBandpowerWidget(QWidget):
         state_b = QHBoxLayout()
         state_b.addWidget(b_record_time_label)
         state_b.addWidget(b_record_time_input)
-        state_b.addWidget(b_record_button)
+        state_b.addWidget(self.b_record_button)
 
         # Bandpower Selection #
 
@@ -278,7 +289,37 @@ class ABBandpowerWidget(QWidget):
         electrode_selection.addWidget(all_electrodes_button)
         electrode_selection.addLayout(custom_electrodes_option)
 
-        # Build process bandpowers button
+        # Input Section Layout #
+
+        # Titles
+        data_recording_title = QLabel("Record Data")
+        data_recording_title.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        data_recording_title.setStyleSheet("""color: #fff;font-size: 15px;""")
+        data_processing_title = QLabel("Data Processing Options")
+        data_processing_title.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        data_processing_title.setStyleSheet("""color: #fff;font-size: 15px;""")
+
+        input_layout = QGridLayout()
+        input_layout.addWidget(data_recording_title, 0, 0)
+        input_layout.addLayout(state_a, 1, 0)
+        input_layout.addLayout(state_b, 2, 0)
+        input_layout.addWidget(data_processing_title, 3, 0)
+        input_layout.addLayout(bandpower_selection, 4, 0)
+        input_layout.addWidget(relative_plot_checkbox, 5, 0)
+        input_layout.addWidget(sixty_hz_filter_checkbox, 6, 0)
+        input_layout.addWidget(zero_to_five_hz_filter_checkbox, 7, 0)
+        input_layout.addLayout(frequency_range_selection, 8, 0)
+        input_layout.addLayout(electrode_selection, 9, 0)
+
+        # ############## #
+        # Output Section #
+        # ############## #
+
+        # State A/B Graph #
+
+        self.graph = Graph(self, self.parent)
+
+        # Rescale graph button #
 
         rescale_graph_button = QPushButton("Rescale Graph")
         rescale_graph_button.pressed.connect(self.rescale_graph)
@@ -292,48 +333,78 @@ class ABBandpowerWidget(QWidget):
             font-size: 15px;
         """)
 
-        # Input Section Layout #
+        graph_w = QVBoxLayout()
+        graph_w.addWidget(self.graph)
+        graph_w.addWidget(rescale_graph_button)
 
-        # Titles
-        data_recording_title = QLabel("Record Data")
-        data_recording_title.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        data_recording_title.setStyleSheet("""color: #fff;font-size: 15px;""")
-        data_processing_title = QLabel("Data Processing Options")
-        data_processing_title.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        data_processing_title.setStyleSheet("""color: #fff;font-size: 15px;""")
+        # State A Information #
 
-        input_layout = QGridLayout()
-        # input_layout.addLayout(state_a, 0, 0)
-        # input_layout.addLayout(state_b, 1, 0)
-        input_layout.addWidget(data_recording_title, 0, 0)
-        input_layout.addLayout(state_a, 1, 0)
-        input_layout.addLayout(state_b, 2, 0)
-        input_layout.addWidget(data_processing_title, 3, 0)
-        input_layout.addLayout(bandpower_selection, 4, 0)
-        input_layout.addWidget(relative_plot_checkbox, 5, 0)
-        input_layout.addWidget(sixty_hz_filter_checkbox, 6, 0)
-        input_layout.addWidget(zero_to_five_hz_filter_checkbox, 7, 0)
-        input_layout.addLayout(frequency_range_selection, 8, 0)
-        input_layout.addLayout(electrode_selection, 9, 0)
-        input_layout.addWidget(rescale_graph_button, 10, 0)
+        self.a_title_w = QLabel("State A")
+        self.a_title_w.setStyleSheet("""color: #fff;font-size: 15px;""")
 
-        # ############## #
-        # Output Section #
-        # ############## #
+        self.a_frequency_spacing_w = QLabel("Frequency Bin Spacing (Hz): N/A")
+        self.a_frequency_spacing_w.setStyleSheet("""color: #fff;font-size: 15px;""")
 
-        # Widgets
+        self.a_delta_w = QLabel("Delta Relative Power: N/A")
+        self.a_delta_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.a_theta_w = QLabel("Theta Relative Power: N/A")
+        self.a_theta_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.a_alpha_w = QLabel("Alpha Relative Power: N/A")
+        self.a_alpha_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.a_beta_w = QLabel("Beta Relative Power: N/A")
+        self.a_beta_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.a_gamma_w = QLabel("Gamma Relative Power: N/A")
+        self.a_gamma_w.setStyleSheet("""color: #fff;font-size: 15px;""")
 
-        self.graph = Graph(self, self.parent)
+        a_output_information = QVBoxLayout()
+        a_output_information.addWidget(self.a_title_w)
+        a_output_information.addWidget(self.a_frequency_spacing_w)
+        a_output_information.addWidget(self.a_delta_w)
+        a_output_information.addWidget(self.a_theta_w)
+        a_output_information.addWidget(self.a_alpha_w)
+        a_output_information.addWidget(self.a_beta_w)
+        a_output_information.addWidget(self.a_gamma_w)
 
-        w_out = QLabel("Output")
-        w_out.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        w_out.setStyleSheet("""color: #fff;font-size: 15px;""")
+        # State B Information #
 
-        # Output Section Layout
+        self.b_title_w = QLabel("State B")
+        self.b_title_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+
+        self.b_frequency_spacing_w = QLabel("Frequency Bin Spacing (Hz): N/A")
+        self.b_frequency_spacing_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+
+        self.b_delta_w = QLabel("Delta Relative Power: N/A")
+        self.b_delta_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.b_theta_w = QLabel("Theta Relative Power: N/A")
+        self.b_theta_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.b_alpha_w = QLabel("Alpha Relative Power: N/A")
+        self.b_alpha_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.b_beta_w = QLabel("Beta Relative Power: N/A")
+        self.b_beta_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+        self.b_gamma_w = QLabel("Gamma Relative Power: N/A")
+        self.b_gamma_w.setStyleSheet("""color: #fff;font-size: 15px;""")
+
+        b_output_information = QVBoxLayout()
+        b_output_information.addWidget(self.b_title_w)
+        b_output_information.addWidget(self.b_frequency_spacing_w)
+        b_output_information.addWidget(self.b_delta_w)
+        b_output_information.addWidget(self.b_theta_w)
+        b_output_information.addWidget(self.b_alpha_w)
+        b_output_information.addWidget(self.b_beta_w)
+        b_output_information.addWidget(self.b_gamma_w)
+
+        # Output Section Layout #
+
+        output_information = QGridLayout()
+        output_information.addLayout(a_output_information, 0, 0)
+        output_information.addLayout(b_output_information, 1, 0)
 
         output_layout = QGridLayout()
-        output_layout.addWidget(self.graph, 0, 0)
-        output_layout.addWidget(w_out, 1, 0)
+        output_layout.addLayout(graph_w, 0, 0)
+        output_layout.addLayout(output_information, 0, 1)
+
+        output_layout.setColumnStretch(0, 3)
+        output_layout.setColumnStretch(1, 1)
 
         # ############ #
         # Macro Layout #
@@ -354,35 +425,31 @@ class ABBandpowerWidget(QWidget):
 
         self.setLayout(layout)
 
+    def pressed_record_a(self):
+        self.a_record_button.setText("Recording...")
+
     def record_a(self):
-        if not self.recording:
-            self.recording = True
-            num_data_points = self.parent.sampling_rate * self.a_record_time
-            # self.parent.board_shim.start_stream(num_data_points)
-            print('recording state a')
-            time.sleep(self.a_record_time)  # let buffer get filled
-            self.a_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
-            self.recording = False
-            if self.a_data is not None and self.b_data is not None:
-                self.process_bp()
-            pd.DataFrame(np.transpose(self.a_data)).to_csv('state_raw_data/a_data.csv')
-        else:
-            print('Wait for current recording to finish')
+        num_data_points = self.parent.sampling_rate * self.a_record_time
+        print('recording state a')
+        time.sleep(self.a_record_time)  # let buffer get filled
+        self.a_record_button.setText("Record State A")
+        self.a_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
+        if self.a_data is not None and self.b_data is not None:
+            self.process_bp()
+        pd.DataFrame(np.transpose(self.a_data)).to_csv('state_raw_data/a_data.csv')
+
+    def record_b_pressed(self):
+        self.b_record_button.setText("Recording...")
 
     def record_b(self):
-        if not self.recording:
-            self.recording = True
-            num_data_points = self.parent.sampling_rate * self.b_record_time
-            # self.parent.board_shim.start_stream(num_data_points)
-            print('recording state b')
-            time.sleep(self.b_record_time)  # let buffer get filled
-            self.b_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
-            self.recording = False
-            if self.a_data is not None and self.b_data is not None:
-                self.process_bp()
-            pd.DataFrame(np.transpose(self.b_data)).to_csv('state_raw_data/b_data.csv')
-        else:
-            print('Wait for current recording to finish')
+        num_data_points = self.parent.sampling_rate * self.b_record_time
+        print('recording state b')
+        time.sleep(self.b_record_time)  # let buffer get filled
+        self.b_record_button.setText("Record State B")
+        self.b_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
+        if self.a_data is not None and self.b_data is not None:
+            self.process_bp()
+        pd.DataFrame(np.transpose(self.b_data)).to_csv('state_raw_data/b_data.csv')
 
     def set_a_record_time(self, seconds):
         self.a_record_time = int(seconds)
@@ -478,6 +545,10 @@ class ABBandpowerWidget(QWidget):
         b_processed_channel_holder = []
         a_frequencies = []
         b_frequencies = []
+        uncut_a_frequencies = []
+        uncut_b_frequencies = []
+        uncut_a_bandpowers = []
+        uncut_b_bandpowers = []
 
         for i in range(0, NUM_ELECTRODES):
             if self.include_all_electrodes or (i+1) in self.custom_electrode_selection:
@@ -525,21 +596,26 @@ class ABBandpowerWidget(QWidget):
                     print('ERROR: Bandpower method is not implemented')
                     return
 
+                uncut_a_frequencies = a_frequencies.copy()
+                uncut_b_frequencies = b_frequencies.copy()
+                uncut_a_bandpowers = a_power_spectral_density.copy()
+                uncut_b_bandpowers = b_power_spectral_density.copy()
+
                 if self.include_all_frequencies:
-                    a_total_power = integrate.simps(a_power_spectral_density)
-                    b_total_power = integrate.simps(b_power_spectral_density)
+                    self.a_total_power = integrate.simps(a_power_spectral_density)
+                    self.b_total_power = integrate.simps(b_power_spectral_density)
                 else:
                     a_band_idx = np.logical_and(a_frequencies >= self.custom_low_frequency,
                                                 a_frequencies <= self.custom_high_frequency)
                     a_frequencies = a_frequencies[a_band_idx]
                     a_power_spectral_density = a_power_spectral_density[a_band_idx]
-                    a_total_power = integrate.simps(a_power_spectral_density)
+                    self.a_total_power = integrate.simps(a_power_spectral_density)
 
                     b_band_idx = np.logical_and(b_frequencies >= self.custom_low_frequency,
                                                 b_frequencies <= self.custom_high_frequency)
                     b_frequencies = b_frequencies[b_band_idx]
                     b_power_spectral_density = b_power_spectral_density[b_band_idx]
-                    b_total_power = integrate.simps(b_power_spectral_density)
+                    self.b_total_power = integrate.simps(b_power_spectral_density)
 
                 # Get relevant band powers
                 a_band_powers = []
@@ -547,7 +623,7 @@ class ABBandpowerWidget(QWidget):
                     bin = a_frequencies[j]
                     band_power = a_power_spectral_density[j]
                     if self.relative_plot:
-                        band_power = band_power / a_total_power
+                        band_power = band_power / self.a_total_power
                     a_band_powers.append(band_power)
 
                 b_band_powers = []
@@ -555,7 +631,7 @@ class ABBandpowerWidget(QWidget):
                     bin = b_frequencies[j]
                     band_power = b_power_spectral_density[j]
                     if self.relative_plot:
-                        band_power = band_power / b_total_power
+                        band_power = band_power / self.b_total_power
                     b_band_powers.append(band_power)
 
                 a_processed_channel_holder.append(a_band_powers)
@@ -573,6 +649,64 @@ class ABBandpowerWidget(QWidget):
 
         # Plot B
         self.graph.plot_b(self.b_frequencies, self.b_processed_bp)
+
+        # Get Band Powers #
+
+        for i in range(len(uncut_a_frequencies)):
+            if uncut_a_frequencies[i] not in a_frequencies:
+                uncut_a_frequencies[i] = 0
+                uncut_a_bandpowers[i] = 0
+
+        for i in range(len(uncut_b_frequencies)):
+            if uncut_b_frequencies[i] not in b_frequencies:
+                uncut_b_frequencies[i] = 0
+                uncut_b_bandpowers[i] = 0
+
+        for i in range(len(EEG_BANDS)):
+            start_freq = EEG_BANDS[i][0]
+            end_freq = EEG_BANDS[i][1]
+
+            # Process bands for a
+            uncut_a_band_idx = np.logical_and(uncut_a_frequencies >= start_freq,
+                                              uncut_a_frequencies <= end_freq)
+            a_band_psd = uncut_a_bandpowers[uncut_a_band_idx]
+            if len(a_band_psd) > 1:
+                a_band_power = integrate.simps(a_band_psd)
+            else:
+                a_band_power = 0
+            self.a_standard_band_values[i] = a_band_power / self.a_total_power
+
+            # Process bands for b
+            uncut_b_band_idx = np.logical_and(uncut_b_frequencies >= start_freq,
+                                              uncut_b_frequencies <= end_freq)
+            b_band_psd = uncut_b_bandpowers[uncut_b_band_idx]
+            if len(b_band_psd) > 1:
+                b_band_power = integrate.simps(b_band_psd)
+            else:
+                b_band_power = 0
+            self.b_standard_band_values[i] = b_band_power / self.b_total_power
+
+        self.update_output_information()
+
+    def update_output_information(self):
+        self.a_title_w.setText("State A (Recorded " + str(self.a_record_time) + " seconds of data)")
+        self.a_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
+                                           + str(round(self.a_frequencies[1] - self.a_frequencies[0], 3)))
+        self.a_delta_w.setText("Delta Relative Power: " + str(round(self.a_standard_band_values[0], 3)))
+        self.a_theta_w.setText("Theta Relative Power: " + str(round(self.a_standard_band_values[1], 3)))
+        self.a_alpha_w.setText("Alpha Relative Power: " + str(round(self.a_standard_band_values[2], 3)))
+        self.a_beta_w.setText("Beta Relative Power: " + str(round(self.a_standard_band_values[3], 3)))
+        self.a_gamma_w.setText("Gamma Relative Power: " + str(round(self.a_standard_band_values[4], 3)))
+
+        self.b_title_w.setText("State B (Recorded " + str(self.b_record_time) + " seconds of data)")
+        self.b_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
+                                           + str(round(self.b_frequencies[1] - self.b_frequencies[0], 3)))
+
+        self.b_delta_w.setText("Delta Relative Power: " + str(round(self.b_standard_band_values[0], 3)))
+        self.b_theta_w.setText("Theta Relative Power: " + str(round(self.b_standard_band_values[1], 3)))
+        self.b_alpha_w.setText("Alpha Relative Power: " + str(round(self.b_standard_band_values[2], 3)))
+        self.b_beta_w.setText("Beta Relative Power: " + str(round(self.b_standard_band_values[3], 3)))
+        self.b_gamma_w.setText("Gamma Relative Power: " + str(round(self.b_standard_band_values[4], 3)))
 
 
 class Graph(pg.GraphicsLayoutWidget):
