@@ -28,8 +28,8 @@ from electodeVisualizerWidget import *
 from bandGraphIntro import *
 from bandGraphWidget import *
 from ABBandpowerWidget import *
-# from handPredictionIntroWidget import *
-# from handPredictionWidget import *
+from bandpowerProcessing import BandpowerProcessing
+from stateDetectionWidget import StateDetectionWidget
 
 
 # Main application window
@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
         # Toolbar set up
         toolbar = QToolBar("Brain Boi toolbar")
         self.addToolBar(toolbar)
+        self.bp_processing = BandpowerProcessing()
 
         # Page Widgets are each a layer of the stacked layout
         pageLayout = QVBoxLayout()
@@ -112,6 +113,7 @@ class MainWindow(QMainWindow):
         self.stacklayout.addWidget(BandGraphIntro(self))
         self.stacklayout.addWidget(BandGraphWidget(self))
         self.stacklayout.addWidget(ABBandpowerWidget(self))
+        self.stacklayout.addWidget(StateDetectionWidget(self))
         # self.stacklayout.addWidget(HandPredictionIntroWidget(self))
         # self.stacklayout.addWidget(HandPredictionWidget(self))
         self.lastIndex = 10
