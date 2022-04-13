@@ -30,6 +30,7 @@ from bandGraphWidget import *
 from ABBandpowerWidget import *
 from bandpowerProcessing import BandpowerProcessing
 from stateDetectionWidget import StateDetectionWidget
+from visualStimulusWindow import VisualStimulusWindow
 
 
 # Main application window
@@ -101,7 +102,13 @@ class MainWindow(QMainWindow):
         # Help button - on toolbar
         self.helpButton = QPushButton("Help")
         self.helpButton.pressed.connect(self.show_help_window)
+        self.visualStimulus = QPushButton("Visual Stimulus")
+        self.visualStimulus.pressed.connect(self.show_visual_stimulus_window)
         toolbar.addWidget(self.helpButton)
+        toolbar.addWidget(self.visualStimulus)
+
+        # Visual stimulus - on toolbar
+
 
         # Add Pages to stack
         self.stacklayout.addWidget(WelcomeWidget(self))
@@ -222,6 +229,10 @@ class MainWindow(QMainWindow):
         else:
             self.helpWindow.close()  # Close window.
             self.helpWindow = None
+
+    def show_visual_stimulus_window(self):
+        self.w = VisualStimulusWindow()
+        self.w.show()
 
 
 app = QApplication(sys.argv)
