@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QTextDocument
 from PySide6.QtWidgets import (
     QLabel,
     QComboBox,
@@ -18,7 +19,10 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QButtonGroup,
     QRadioButton,
-    QScrollArea
+    QScrollArea,
+    QPlainTextDocumentLayout,
+    QTableWidget,
+    QTableWidgetItem
 )
 from funcs import *
 from state_detection_widget import StateDetectionWidget
@@ -165,6 +169,11 @@ class ABBandpowerWidget(QWidget):
         state_d.addWidget(d_record_time_label)
         state_d.addWidget(d_record_time_input)
         state_d.addWidget(self.d_record_button)
+
+        # Clear states button #
+        self.clear_states_button = make_button("Clear States")
+        self.clear_states_button.pressed.connect(self.clear_states_button_pressed)
+        self.clear_states_button.released.connect(self.clear_states_button_released)
 
         # Bandpower Selection #
 
@@ -328,6 +337,7 @@ class ABBandpowerWidget(QWidget):
         states.addLayout(state_b)
         states.addLayout(state_c)
         states.addLayout(state_d)
+        states.addWidget(self.clear_states_button)
         states_frame = QFrame()
         states_frame.setLayout(states)
         states_scrollable = QScrollArea()
@@ -447,7 +457,61 @@ class ABBandpowerWidget(QWidget):
 
         self.state_detection = StateDetectionWidget(self.parent)
         self.bandpower_stats = make_label("Bandpower stats")
+        self.bandpower_stats = QTableWidget(4, 5)
+        self.bandpower_stats.setStyleSheet("""
+            background-color: #103650;
+            border-width: 5px;
+            border-color: black;
+            color: #e3ebec;
+            font: 14px;
+        """)
+        delta_header = QTableWidgetItem()
+        delta_header.setData(Qt.DisplayRole, "Delta (0-4)")
+        self.bandpower_stats.setHorizontalHeaderItem(0, delta_header)
+        theta_header = QTableWidgetItem()
+        theta_header.setData(Qt.DisplayRole, "Theta (4-7)")
+        self.bandpower_stats.setHorizontalHeaderItem(1, theta_header)
+        alpha_header = QTableWidgetItem()
+        alpha_header.setData(Qt.DisplayRole, "Alpha (7-12)")
+        self.bandpower_stats.setHorizontalHeaderItem(2, alpha_header)
+        beta_header = QTableWidgetItem()
+        beta_header.setData(Qt.DisplayRole, "Beta (12-30)")
+        self.bandpower_stats.setHorizontalHeaderItem(3, beta_header)
+        gamma_header = QTableWidgetItem()
+        gamma_header.setData(Qt.DisplayRole, "Gamma (30-50)")
+        self.bandpower_stats.setHorizontalHeaderItem(4, gamma_header)
+        a_header = QTableWidgetItem()
+        a_header.setData(Qt.DisplayRole, "State A")
+        self.bandpower_stats.setVerticalHeaderItem(0, a_header)
+        b_header = QTableWidgetItem()
+        b_header.setData(Qt.DisplayRole, "State B")
+        self.bandpower_stats.setVerticalHeaderItem(1, b_header)
+        c_header = QTableWidgetItem()
+        c_header.setData(Qt.DisplayRole, "State C")
+        self.bandpower_stats.setVerticalHeaderItem(2, c_header)
+        d_header = QTableWidgetItem()
+        d_header.setData(Qt.DisplayRole, "State D")
+        self.bandpower_stats.setVerticalHeaderItem(3, d_header)
+
+        for i in range(4):
+            for j in range(5):
+                table_item = QTableWidgetItem()
+                table_item.setData(Qt.DisplayRole, "0")
+                self.bandpower_stats.setItem(i, j, table_item)
+
+        # self.bandpower_stats.setStyleSheet("""
+        #     background-color: light gray;
+        #     border-width: 5px;
+        #     border-color: black;
+        #     color: #e3ebec;
+        #     font: 14px;
+        #     height: 1em;
+        #     max-width: 30em;
+        #     padding: 6px;
+        #     margin: 1em 0;
+        # """)
         self.live_timeseries = make_label("Live timeseries")
+
 
         self.output_stack = QStackedLayout()
         self.output_stack.addWidget(self.state_graph_frame)
@@ -689,24 +753,46 @@ class ABBandpowerWidget(QWidget):
         self.update_output_information()
 
     def update_output_information(self):
-        self.a_title_w.setText("State A (Recorded " + str(self.a_record_time) + " seconds of data)")
-        self.a_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
-                                           + str(round(self.a_frequencies[1] - self.a_frequencies[0], 3)))
-        self.a_delta_w.setText("Delta Relative Power: " + str(round(self.a_standard_band_values[0], 3)))
-        self.a_theta_w.setText("Theta Relative Power: " + str(round(self.a_standard_band_values[1], 3)))
-        self.a_alpha_w.setText("Alpha Relative Power: " + str(round(self.a_standard_band_values[2], 3)))
-        self.a_beta_w.setText("Beta Relative Power: " + str(round(self.a_standard_band_values[3], 3)))
-        self.a_gamma_w.setText("Gamma Relative Power: " + str(round(self.a_standard_band_values[4], 3)))
+        # self.a_title_w.setText("State A (Recorded " + str(self.a_record_time) + " seconds of data)")
+        # self.a_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
+        #                                    + str(round(self.a_frequencies[1] - self.a_frequencies[0], 3)))
+        # self.a_delta_w.setText("Delta Relative Power: " + str(round(self.a_standard_band_values[0], 3)))
+        # self.a_theta_w.setText("Theta Relative Power: " + str(round(self.a_standard_band_values[1], 3)))
+        # self.a_alpha_w.setText("Alpha Relative Power: " + str(round(self.a_standard_band_values[2], 3)))
+        # self.a_beta_w.setText("Beta Relative Power: " + str(round(self.a_standard_band_values[3], 3)))
+        # self.a_gamma_w.setText("Gamma Relative Power: " + str(round(self.a_standard_band_values[4], 3)))
+        #
+        # self.b_title_w.setText("State B (Recorded " + str(self.b_record_time) + " seconds of data)")
+        # self.b_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
+        #                                    + str(round(self.b_frequencies[1] - self.b_frequencies[0], 3)))
+        #
+        # self.b_delta_w.setText("Delta Relative Power: " + str(round(self.b_standard_band_values[0], 3)))
+        # self.b_theta_w.setText("Theta Relative Power: " + str(round(self.b_standard_band_values[1], 3)))
+        # self.b_alpha_w.setText("Alpha Relative Power: " + str(round(self.b_standard_band_values[2], 3)))
+        # self.b_beta_w.setText("Beta Relative Power: " + str(round(self.b_standard_band_values[3], 3)))
+        # self.b_gamma_w.setText("Gamma Relative Power: " + str(round(self.b_standard_band_values[4], 3)))
 
-        self.b_title_w.setText("State B (Recorded " + str(self.b_record_time) + " seconds of data)")
-        self.b_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
-                                           + str(round(self.b_frequencies[1] - self.b_frequencies[0], 3)))
-
-        self.b_delta_w.setText("Delta Relative Power: " + str(round(self.b_standard_band_values[0], 3)))
-        self.b_theta_w.setText("Theta Relative Power: " + str(round(self.b_standard_band_values[1], 3)))
-        self.b_alpha_w.setText("Alpha Relative Power: " + str(round(self.b_standard_band_values[2], 3)))
-        self.b_beta_w.setText("Beta Relative Power: " + str(round(self.b_standard_band_values[3], 3)))
-        self.b_gamma_w.setText("Gamma Relative Power: " + str(round(self.b_standard_band_values[4], 3)))
+        if self.plot_state[0] is True:
+            for j in range(5):
+                print('adding')
+                table_item = QTableWidgetItem()
+                table_item.setData(Qt.DisplayRole, str(round(self.a_standard_band_values[j], 3)))
+                self.bandpower_stats.setItem(0, j, table_item)
+        if self.plot_state[1] is True:
+            for j in range(5):
+                table_item = QTableWidgetItem()
+                table_item.setData(Qt.DisplayRole, str(round(self.b_standard_band_values[j], 3)))
+                self.bandpower_stats.setItem(1, j, table_item)
+        if self.plot_state[2] is True:
+            for j in range(5):
+                table_item = QTableWidgetItem()
+                table_item.setData(Qt.DisplayRole, str(round(self.c_standard_band_values[j], 3)))
+                self.bandpower_stats.setItem(2, j, table_item)
+        if self.plot_state[3] is True:
+            for j in range(5):
+                table_item = QTableWidgetItem()
+                table_item.setData(Qt.DisplayRole, str(round(self.d_standard_band_values[j], 3)))
+                self.bandpower_stats.setItem(3, j, table_item)
 
     def home_button_pressed(self):
         self.home_button.setStyleSheet("""
@@ -750,6 +836,61 @@ class ABBandpowerWidget(QWidget):
         #     self.output_frame.setWidget(QLabel("Hello"))
         # elif self.selected_output_option == self.output_options[3]:
         #     self.output_frame.setLayout(self.state_detection_l)
+
+    def clear_states_button_pressed(self):
+        self.home_button.setStyleSheet("""
+            background-color: #284351;
+            border-style: outset;
+            border-width: 2px;
+            border-radius: 10px;
+            border-color: #e3ebec;
+            color: white;
+            font: 14px;
+            height: 1em;
+            max-width: 30em;
+            padding: 6px;
+            margin: 1em 0;
+        """)
+
+    def clear_states_button_released(self):
+        self.home_button.setStyleSheet("""
+            background-color: #73787c;
+            border-style: outset;
+            border-width: 2px;
+            border-radius: 10px;
+            border-color: #e3ebec;
+            color: white;
+            font: 14px;
+            height: 1em;
+            max-width: 30em;
+            padding: 6px;
+            margin: 1em 0;
+        """)
+        # Plotting info
+        self.plot_state = [False, False, False, False]  # a, b, c, d
+
+        # Processed data variables
+        self.a_processed_bp = None
+        self.b_processed_bp = None
+        self.c_processed_bp = None
+        self.d_processed_bp = None
+        self.a_frequencies = [0, 0]
+        self.b_frequencies = [0, 0]
+        self.c_frequencies = [0, 0]
+        self.d_frequencies = [0, 0]
+
+        self.a_standard_band_values = [0, 0, 0, 0, 0]
+        self.b_standard_band_values = [0, 0, 0, 0, 0]
+        self.c_standard_band_values = [0, 0, 0, 0, 0]
+        self.d_standard_band_values = [0, 0, 0, 0, 0]
+
+        for i in range(4):
+            for j in range(5):
+                table_item = QTableWidgetItem()
+                table_item.setData(Qt.DisplayRole, "0")
+                self.bandpower_stats.setItem(i, j, table_item)
+
+        self.graph.clear_plots()
 
 
 class Graph(pg.GraphicsLayoutWidget):

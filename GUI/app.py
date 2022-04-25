@@ -31,6 +31,8 @@ from ABBandpowerWidget import *
 from bandpowerProcessing import BandpowerProcessing
 from stateDetectionWidget import StateDetectionWidget
 from visualStimulusWindow import VisualStimulusWindow
+# from handPredictionWidget import *
+from handPredictionIntroWidget import *
 
 
 # Main application window
@@ -102,10 +104,10 @@ class MainWindow(QMainWindow):
         # Help button - on toolbar
         self.helpButton = QPushButton("Help")
         self.helpButton.pressed.connect(self.show_help_window)
-        self.visualStimulus = QPushButton("Visual Stimulus")
-        self.visualStimulus.pressed.connect(self.show_visual_stimulus_window)
+        # self.visualStimulus = QPushButton("Visual Stimulus")
+        # self.visualStimulus.pressed.connect(self.show_visual_stimulus_window)
         toolbar.addWidget(self.helpButton)
-        toolbar.addWidget(self.visualStimulus)
+        # toolbar.addWidget(self.visualStimulus)
 
         # Visual stimulus - on toolbar
 
@@ -119,9 +121,9 @@ class MainWindow(QMainWindow):
         self.stacklayout.addWidget(ElectodeVisualizerWidget(self))
         self.stacklayout.addWidget(BandGraphIntro(self))
         self.stacklayout.addWidget(BandGraphWidget(self))
-        self.stacklayout.addWidget(ABBandpowerWidget(self))
-        self.stacklayout.addWidget(StateDetectionWidget(self))
-        # self.stacklayout.addWidget(HandPredictionIntroWidget(self))
+        # self.stacklayout.addWidget(ABBandpowerWidget(self))
+        # self.stacklayout.addWidget(StateDetectionWidget(self))
+        self.stacklayout.addWidget(HandPredictionIntroWidget(self))
         # self.stacklayout.addWidget(HandPredictionWidget(self))
         self.lastIndex = 10
 
