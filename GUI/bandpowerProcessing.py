@@ -15,7 +15,7 @@ class BandpowerProcessing:
         self.filter_zero_to_five_hz = False
         self.include_all_frequencies = True
         self.custom_low_frequency = 0
-        self.custom_high_frequency = 125
+        self.custom_high_frequency = 50
 
         self.bp_methods = ["Welch's", "Multitaper", "FFT"]
         self.selected_bp_method = self.bp_methods[0]

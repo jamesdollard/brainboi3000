@@ -29,7 +29,6 @@ from state_detection_widget import StateDetectionWidget
 from unknown_pleasures_widget import UnknownPleasuresWidget
 
 
-
 # Enables user to capture and compare the bandpower of two recording sessions
 class ABBandpowerWidget(QWidget):
 
@@ -41,6 +40,7 @@ class ABBandpowerWidget(QWidget):
         self.parent = parent
 
         # Data gathering variables
+        self.record_time = 0
         self.a_record_time = 0
         self.b_record_time = 0
         self.c_record_time = 0
@@ -91,6 +91,21 @@ class ABBandpowerWidget(QWidget):
         # Input Section #
         # ############# #
 
+        # Record time #
+
+        record_time_label = make_label("Set Record Time (s): ")
+
+        record_time_input = QLineEdit()
+        record_time_input.setPlaceholderText("0")
+        record_time_input.setMaxLength(2)
+        record_time_input.textChanged.connect(self.set_record_time)
+        record_time_input.setStyleSheet("""background-color: #fff; color: #000;font: 15px; min-width: 50px;
+                                             margin-bottom: 0px; max-width: 50px; padding: 5px;""")
+
+        record_time_l = QHBoxLayout()
+        record_time_l.addWidget(record_time_label)
+        record_time_l.addWidget(record_time_input)
+
         # State A #
 
         a_record_time_label = make_label("State A Record Time (s): ")
@@ -107,8 +122,8 @@ class ABBandpowerWidget(QWidget):
         # self.a_record_button.released.connect(self.record_a)
 
         state_a = QHBoxLayout()
-        state_a.addWidget(a_record_time_label)
-        state_a.addWidget(a_record_time_input)
+        # state_a.addWidget(a_record_time_label)
+        # state_a.addWidget(a_record_time_input)
         state_a.addWidget(self.a_record_button)
 
         # State B #
@@ -127,8 +142,8 @@ class ABBandpowerWidget(QWidget):
         # self.b_record_button.released.connect(self.record_b)
 
         state_b = QHBoxLayout()
-        state_b.addWidget(b_record_time_label)
-        state_b.addWidget(b_record_time_input)
+        # state_b.addWidget(b_record_time_label)
+        # state_b.addWidget(b_record_time_input)
         state_b.addWidget(self.b_record_button)
 
         # State C #
@@ -147,8 +162,8 @@ class ABBandpowerWidget(QWidget):
         # self.c_record_button.released.connect(self.record_c)
 
         state_c = QHBoxLayout()
-        state_c.addWidget(c_record_time_label)
-        state_c.addWidget(c_record_time_input)
+        # state_c.addWidget(c_record_time_label)
+        # state_c.addWidget(c_record_time_input)
         state_c.addWidget(self.c_record_button)
 
         # State D #
@@ -167,8 +182,8 @@ class ABBandpowerWidget(QWidget):
         # self.d_record_button.released.connect(self.record_d)
 
         state_d = QHBoxLayout()
-        state_d.addWidget(d_record_time_label)
-        state_d.addWidget(d_record_time_input)
+        # state_d.addWidget(d_record_time_label)
+        # state_d.addWidget(d_record_time_input)
         state_d.addWidget(self.d_record_button)
 
         # Clear states button #
@@ -226,7 +241,7 @@ class ABBandpowerWidget(QWidget):
         custom_frequencies_low.setStyleSheet("""background-color: #fff; color: #000;font: 15px; min-width: 50px;
                                                  margin-bottom: 0px; max-width: 50px; padding: 5px;""")
         custom_frequencies_high = QLineEdit()
-        custom_frequencies_high.setPlaceholderText("120")
+        custom_frequencies_high.setPlaceholderText("50")
         custom_frequencies_high.setMaxLength(3)
         custom_frequencies_high.textChanged.connect(self.set_high_frequency)
         custom_frequencies_high.setStyleSheet("""background-color: #fff; color: #000;font: 15px; min-width: 50px;
@@ -334,6 +349,7 @@ class ABBandpowerWidget(QWidget):
         data_processing_title = make_label("Data Processing Options")
 
         states = QVBoxLayout()
+        states.addLayout(record_time_l)
         states.addLayout(state_a)
         states.addLayout(state_b)
         states.addLayout(state_c)
@@ -377,16 +393,11 @@ class ABBandpowerWidget(QWidget):
                         max-width: 30em;
                     """)
 
-        input_layout = QGridLayout()
-        input_layout.addWidget(data_recording_title, 0, 0)
-        input_layout.addWidget(states_box, 1, 0)
-        input_layout.addWidget(data_processing_title, 2, 0)
-        input_layout.addWidget(processing_box, 3, 0)
-        # input_layout.addWidget(relative_plot_checkbox, 4, 0)
-        # input_layout.addWidget(sixty_hz_filter_checkbox, 5, 0)
-        # input_layout.addWidget(zero_to_five_hz_filter_checkbox, 6, 0)
-        # input_layout.addLayout(frequency_range_selection, 7, 0)
-        # input_layout.addLayout(electrode_selection, 8, 0)
+        input_layout = QVBoxLayout()
+        input_layout.addWidget(data_recording_title)
+        input_layout.addWidget(states_box)
+        input_layout.addWidget(data_processing_title)
+        input_layout.addWidget(processing_box)
 
         # ############## #
         # Output Section #
@@ -511,18 +522,6 @@ class ABBandpowerWidget(QWidget):
         self.stats_frame = QFrame()
         self.stats_frame.setLayout(self.stats_layout)
 
-
-        # self.bandpower_stats.setStyleSheet("""
-        #     background-color: light gray;
-        #     border-width: 5px;
-        #     border-color: black;
-        #     color: #e3ebec;
-        #     font: 14px;
-        #     height: 1em;
-        #     max-width: 30em;
-        #     padding: 6px;
-        #     margin: 1em 0;
-        # """)
         self.live_timeseries = make_label("Live timeseries")
 
 
@@ -536,7 +535,7 @@ class ABBandpowerWidget(QWidget):
         # Macro Layout #
         # ############ #
 
-        self.output_options = ['Bandpower Graph', 'Bandpower Statistics', 'Live State Detection', 'Live Timeseries']
+        self.output_options = ['Bandpower Graph', 'Bandpower Statistics', 'Live State Detection', 'Unknown Pleasures']
         self.selected_output_option = self.output_options[0]
 
         output_options_list = QComboBox()
@@ -578,10 +577,10 @@ class ABBandpowerWidget(QWidget):
 
     def pressed_record_a(self):
         self.a_record_button.setText("Recording...")
-        self.a_timer.start(self.a_record_time * 1000)
+        self.a_timer.start(self.record_time * 1000)
 
     def record_a(self):
-        num_data_points = self.parent.sampling_rate * self.a_record_time
+        num_data_points = self.parent.sampling_rate * self.record_time
         print('recording state a')
         self.a_record_button.setText("Record State A")
         self.a_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
@@ -591,10 +590,10 @@ class ABBandpowerWidget(QWidget):
 
     def pressed_record_b(self):
         self.b_record_button.setText("Recording...")
-        self.b_timer.start(self.b_record_time * 1000)
+        self.b_timer.start(self.record_time * 1000)
 
     def record_b(self):
-        num_data_points = self.parent.sampling_rate * self.b_record_time
+        num_data_points = self.parent.sampling_rate * self.record_time
         print('recording state b')
         self.b_record_button.setText("Record State B")
         self.b_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
@@ -604,10 +603,10 @@ class ABBandpowerWidget(QWidget):
 
     def pressed_record_c(self):
         self.c_record_button.setText("Recording...")
-        self.c_timer.start(self.c_record_time * 1000)
+        self.c_timer.start(self.record_time * 1000)
 
     def record_c(self):
-        num_data_points = self.parent.sampling_rate * self.c_record_time
+        num_data_points = self.parent.sampling_rate * self.record_time
         print('recording state c')
         self.c_record_button.setText("Record State C")
         self.c_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
@@ -617,16 +616,20 @@ class ABBandpowerWidget(QWidget):
 
     def pressed_record_d(self):
         self.d_record_button.setText("Recording...")
-        self.d_timer.start(self.d_record_time * 1000)
+        self.d_timer.start(self.record_time * 1000)
 
     def record_d(self):
-        num_data_points = self.parent.sampling_rate * self.d_record_time
+        num_data_points = self.parent.sampling_rate * self.record_time
         print('recording state d')
         self.d_record_button.setText("Record State D")
         self.d_data = self.parent.board_shim.get_current_board_data(num_samples=num_data_points)[1:9]
         self.plot_state[3] = True
         self.process_bp()
         pd.DataFrame(np.transpose(self.d_data)).to_csv('state_raw_data/d_data.csv')
+
+    def set_record_time(self, seconds):
+        self.record_time = int(seconds)
+        print(self.record_time)
 
     def set_a_record_time(self, seconds):
         self.a_record_time = int(seconds)
@@ -695,7 +698,7 @@ class ABBandpowerWidget(QWidget):
 
     def set_high_frequency(self, high):
         if high == "":
-            self.bp_processing.custom_high_frequency = 120
+            self.bp_processing.custom_high_frequency = 50
         else:
             self.bp_processing.custom_high_frequency = int(high)
         print(self.bp_processing.custom_high_frequency)
@@ -750,40 +753,10 @@ class ABBandpowerWidget(QWidget):
         if self.plot_state[3] is True:
             self.graph.plot_d(self.d_frequencies, self.d_processed_bp)
 
-
-        # # Get bandpowers
-        # self.a_frequencies, self.a_processed_bp, self.a_standard_band_values = \
-        #     self.bp_processing.process_state(self.a_data)
-        # self.b_frequencies, self.b_processed_bp, self.b_standard_band_values = \
-        #     self.bp_processing.process_state(self.b_data)
-        #
-        # # Plot frequencies vs bandpowers
-        # self.graph.clear_plots()
-        # self.graph.plot_a(self.a_frequencies, self.a_processed_bp)
-        # self.graph.plot_b(self.b_frequencies, self.b_processed_bp)
-
         # Update output
         self.update_output_information()
 
     def update_output_information(self):
-        # self.a_title_w.setText("State A (Recorded " + str(self.a_record_time) + " seconds of data)")
-        # self.a_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
-        #                                    + str(round(self.a_frequencies[1] - self.a_frequencies[0], 3)))
-        # self.a_delta_w.setText("Delta Relative Power: " + str(round(self.a_standard_band_values[0], 3)))
-        # self.a_theta_w.setText("Theta Relative Power: " + str(round(self.a_standard_band_values[1], 3)))
-        # self.a_alpha_w.setText("Alpha Relative Power: " + str(round(self.a_standard_band_values[2], 3)))
-        # self.a_beta_w.setText("Beta Relative Power: " + str(round(self.a_standard_band_values[3], 3)))
-        # self.a_gamma_w.setText("Gamma Relative Power: " + str(round(self.a_standard_band_values[4], 3)))
-        #
-        # self.b_title_w.setText("State B (Recorded " + str(self.b_record_time) + " seconds of data)")
-        # self.b_frequency_spacing_w.setText("Frequency Bin Spacing (Hz): "
-        #                                    + str(round(self.b_frequencies[1] - self.b_frequencies[0], 3)))
-        #
-        # self.b_delta_w.setText("Delta Relative Power: " + str(round(self.b_standard_band_values[0], 3)))
-        # self.b_theta_w.setText("Theta Relative Power: " + str(round(self.b_standard_band_values[1], 3)))
-        # self.b_alpha_w.setText("Alpha Relative Power: " + str(round(self.b_standard_band_values[2], 3)))
-        # self.b_beta_w.setText("Beta Relative Power: " + str(round(self.b_standard_band_values[3], 3)))
-        # self.b_gamma_w.setText("Gamma Relative Power: " + str(round(self.b_standard_band_values[4], 3)))
 
         if self.plot_state[0] is True:
             for j in range(5):
@@ -840,15 +813,6 @@ class ABBandpowerWidget(QWidget):
 
     def set_output_option(self, i):
         self.output_stack.setCurrentIndex(i)
-        # self.selected_output_option = self.output_options[i]
-        # # Need to update output
-        # if self.selected_output_option == self.output_options[0]:
-        #     self.output_frame.setLayout(self.graph_w)
-        #     self.output_stack.setCurrentIndex(0)
-        # elif self.selected_output_option == self.output_options[1]:
-        #     self.output_frame.setWidget(QLabel("Hello"))
-        # elif self.selected_output_option == self.output_options[3]:
-        #     self.output_frame.setLayout(self.state_detection_l)
 
     def clear_states_button_pressed(self):
         self.home_button.setStyleSheet("""
