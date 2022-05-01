@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 from funcs import *
 from state_detection_widget import StateDetectionWidget
+from unknown_pleasures_widget import UnknownPleasuresWidget
 
 
 
@@ -225,7 +226,7 @@ class ABBandpowerWidget(QWidget):
         custom_frequencies_low.setStyleSheet("""background-color: #fff; color: #000;font: 15px; min-width: 50px;
                                                  margin-bottom: 0px; max-width: 50px; padding: 5px;""")
         custom_frequencies_high = QLineEdit()
-        custom_frequencies_high.setPlaceholderText("125")
+        custom_frequencies_high.setPlaceholderText("120")
         custom_frequencies_high.setMaxLength(3)
         custom_frequencies_high.textChanged.connect(self.set_high_frequency)
         custom_frequencies_high.setStyleSheet("""background-color: #fff; color: #000;font: 15px; min-width: 50px;
@@ -455,6 +456,7 @@ class ABBandpowerWidget(QWidget):
 
         # Live Bandpowers
 
+        self.unknown_pleasures = UnknownPleasuresWidget(self.parent)
         self.state_detection = StateDetectionWidget(self.parent)
         self.bandpower_stats = make_label("Bandpower stats")
         self.bandpower_stats = QTableWidget(4, 5)
@@ -499,6 +501,17 @@ class ABBandpowerWidget(QWidget):
                 table_item.setData(Qt.DisplayRole, "0")
                 self.bandpower_stats.setItem(i, j, table_item)
 
+        self.output_bins_button = make_button("Output frequency bins")
+        self.output_bins_button.pressed.connect(self.output_bins_button_pressed)
+        self.output_bins_button.released.connect(self.output_bins_button_released)
+
+        self.stats_layout = QVBoxLayout()
+        self.stats_layout.addWidget(self.bandpower_stats)
+        self.stats_layout.addWidget(self.output_bins_button)
+        self.stats_frame = QFrame()
+        self.stats_frame.setLayout(self.stats_layout)
+
+
         # self.bandpower_stats.setStyleSheet("""
         #     background-color: light gray;
         #     border-width: 5px;
@@ -515,9 +528,9 @@ class ABBandpowerWidget(QWidget):
 
         self.output_stack = QStackedLayout()
         self.output_stack.addWidget(self.state_graph_frame)
-        self.output_stack.addWidget(self.bandpower_stats)
+        self.output_stack.addWidget(self.stats_frame)
         self.output_stack.addWidget(self.state_detection)
-        self.output_stack.addWidget(self.live_timeseries)
+        self.output_stack.addWidget(self.unknown_pleasures)
 
         # ############ #
         # Macro Layout #
@@ -682,7 +695,7 @@ class ABBandpowerWidget(QWidget):
 
     def set_high_frequency(self, high):
         if high == "":
-            self.bp_processing.custom_high_frequency = 125
+            self.bp_processing.custom_high_frequency = 120
         else:
             self.bp_processing.custom_high_frequency = int(high)
         print(self.bp_processing.custom_high_frequency)
@@ -891,6 +904,68 @@ class ABBandpowerWidget(QWidget):
                 self.bandpower_stats.setItem(i, j, table_item)
 
         self.graph.clear_plots()
+
+    def output_bins_button_pressed(self):
+        self.output_bins_button.setStyleSheet("""
+            background-color: #284351;
+            border-style: outset;
+            border-width: 2px;
+            border-radius: 10px;
+            border-color: #e3ebec;
+            color: white;
+            font: 14px;
+            height: 1em;
+            max-width: 30em;
+            padding: 6px;
+            margin: 1em 0;
+        """)
+
+    def output_bins_button_released(self):
+        self.output_bins_button.setStyleSheet("""
+            background-color: #73787c;
+            border-style: outset;
+            border-width: 2px;
+            border-radius: 10px;
+            border-color: #e3ebec;
+            color: white;
+            font: 14px;
+            height: 1em;
+            max-width: 30em;
+            padding: 6px;
+            margin: 1em 0;
+        """)
+
+        # Build csv
+
+        index = []
+        columns = []
+        if self.plot_state[0] is True:
+            columns = self.a_frequencies
+        elif self.plot_state[1] is True:
+            columns = self.b_frequencies
+        elif self.plot_state[2] is True:
+            columns = self.c_frequencies
+        elif self.plot_state[3] is True:
+            columns = self.d_frequencies
+
+        data = []
+        if self.plot_state[0] is True:
+            data.append(self.a_processed_bp)
+            index.append("State A")
+        if self.plot_state[1] is True:
+            data.append(self.b_processed_bp)
+            index.append("State B")
+        if self.plot_state[2] is True:
+            data.append(self.c_processed_bp)
+            index.append("State C")
+        if self.plot_state[3] is True:
+            data.append(self.d_processed_bp)
+            index.append("State D")
+
+        pd.DataFrame(data=data, index=index, columns=columns).to_csv("Frequency bins.csv")
+
+
+
 
 
 class Graph(pg.GraphicsLayoutWidget):
